@@ -1,0 +1,351 @@
+    1.
+     
+    curl -XPUT "http://127.0.0.1:9200/demo-default/_doc/1" -d'{
+      "message": "[5592:1:0309/123054.737712:ERROR:child_process_sandbox_support_impl_linux.cc(79)] FontService unique font name matching request did not receive a response.",
+      "fileset": {
+        "name": "syslog"
+      },
+      "process": {
+        "name": "org.gnome.Shell.desktop",
+        "pid": 3383
+      },
+      "@timestamp": "2020-03-09T18:00:54.000+05:30",
+      "host": {
+        "hostname": "bionic",
+        "name": "bionic"
+      }
+    }'
+     
+     
+    2.
+     
+    curl -XGET "http://127.0.0.1:9200/demo-default/_mapping?pretty=true"
+     
+    3.
+     
+    curl -XGET "http://127.0.0.1:9200/_cluster/state?pretty=true" >> es-cluster-state.json
+     
+    4.
+     
+    curl -XPUT "http://127.0.0.1:9200/demo-flattened"
+     
+    5.
+     
+    curl -XPUT "http://127.0.0.1:9200/demo-flattened/_mapping" -d'{
+      "properties": {
+        "host": {
+          "type": "flattened"
+        }
+      }
+    }'
+     
+    6.
+     
+    curl -XPUT "http://127.0.0.1:9200/demo-flattened/_doc/1" -d'{
+      "message": "[5592:1:0309/123054.737712:ERROR:child_process_sandbox_support_impl_linux.cc(79)] FontService unique font name matching request did not receive a response.",
+      "fileset": {
+        "name": "syslog"
+      },
+      "process": {
+        "name": "org.gnome.Shell.desktop",
+        "pid": 3383
+      },
+      "@timestamp": "2020-03-09T18:00:54.000+05:30",
+      "host": {
+        "hostname": "bionic",
+        "name": "bionic"
+      }
+    }'
+     
+    7.
+     
+    curl -XGET "http://127.0.0.1:9200/demo-flattened/_mapping?pretty=true"
+     
+    8.
+     
+    curl -XPOST "http://127.0.0.1:9200/demo-flattened/_update/1" -d'{
+        "doc" : {
+            "host" : {
+              "osVersion": "Bionic Beaver",
+              "osArchitecture":"x86_64"
+            }
+        }
+    }'
+     
+    9.
+     
+    curl -XGET "http://127.0.0.1:9200/demo-flattened/_search?pretty=true" -d'{
+      "query": {
+        "term": {
+          "host": "Bionic Beaver"
+        }
+      }
+    }'
+     
+    10.
+     
+    curl -XGET "http://127.0.0.1:9200/demo-flattened/_search?pretty=true" -d'{
+      "query": {
+        "term": {
+          "host.osVersion": "Bionic Beaver"
+        }
+      }
+    }'
+     
+    11.
+     
+    curl -XGET "http://127.0.0.1:9200/demo-flattened/_search?pretty=true" -d'{
+      "query": {
+        "term": {
+          "host.osVersion": "Beaver"
+        }
+      }
+    }'
+
+##
+
+curl --request PUT 'http://localhost:9200/microservice-logs' \
+--data-raw '{
+   "mappings": {
+       "properties": {
+           "timestamp": { "type": "date"  },
+           "service": { "type": "keyword" },
+           "host_ip": { "type": "ip" },
+           "port": { "type": "integer" },
+           "message": { "type": "text" }
+       }
+   }
+}'
+
+curl --request POST 'http://localhost:9200/microservice-logs/_close'
+
+curl --request POST 'http://localhost:9200/microservice-logs/_open'
+
+## Paginacao 
+
+````
+  $ curl -XGET '127.0.0.1:9200/movies/_search?size=2&from=1&pretty'
+````
+
+## Ordenacao
+
+````
+  $ curl -XGET '127.0.0.1:9200/movies/_search?
+````
+
+## Fuzziness
+
+````
+  $ curl -XGET 127.0.0.1:9200/movies/_search?pretty -d '
+
+{
+  "query":{
+    "fuzzy":{
+      "title":{"value":"intersteller","fuzziness":2}
+    }
+  }
+}'
+````
+
+## 
+1.
+
+curl -XDELETE 127.0.0.1:9200/movies
+
+2.
+
+    curl -XPUT '127.0.0.1:9200/movies?pretty' -d '
+    {
+    "settings": {
+    "analysis": {
+    "filter": {
+    "autocomplete_filter": {
+    "type": "edge_ngram",
+    "min_gram": 1,
+    "max_gram": 20
+    }
+    },
+    "analyzer": {
+    "autocomplete": {
+    "type": "custom",
+    "tokenizer": "standard",
+    "filter": [
+    "lowercase",
+    "autocomplete_filter"
+    ]
+    }
+    }
+    }
+    }
+    }'
+
+3.
+
+    curl -XGET '127.0.0.1:9200/movies/_analyze?pretty' -d '
+    {
+    "analyzer": "autocomplete",
+    "text": "sta"
+    }'
+
+4.
+
+    curl -XPUT '127.0.0.1:9200/movies/_mapping?pretty' -d '
+    {
+    "properties" : {
+    "title": {
+    "type" : "text",
+    "analyzer": "autocomplete"
+    }
+    }
+    }'
+
+5.
+
+curl -XPUT 127.0.0.1:9200/_bulk --data-binary @movies.json
+
+6.
+
+    curl -XGET '127.0.0.1:9200/movies/_search?pretty' -d '
+    {
+    "query": {
+    "match": {
+    "title": "sta"
+    }
+    }
+    }'
+
+7.
+
+    curl -XGET '127.0.0.1:9200/movies/_search?pretty' -d '
+    {
+    "query": {
+    "match": {
+    "title": {
+    "query": "sta",
+    "analyzer": "standard"
+    }
+    }
+    }
+    }'
+
+8.
+
+    curl -XGET '127.0.0.1:9200/movies/_search?pretty' -d '
+    {
+    "query": {
+    "match": {
+    "title": {
+    "query": "star tr",
+    "analyzer": "standard"
+    }
+    }
+    }
+    }'
+
+
+## Importacao
+
+
+### Logstash
+
+vantagens
+- pode analisar , transformar e filtrar dados no processo 
+- pode produzir dados estruturados 
+- pode anonimizar dados 
+- pode escalar entre varios nodes 
+- garantia de pelo menos uma entrega 
+- pode absorver picos de cargas 
+
+instalando o Logstash
+
+````
+  $ apt install openjdk-8-jre-headless
+  $ apt-get update 
+  $ apt install Logstash
+````
+
+arquivo de configuracao inicial 
+
+cd /usr/share/Logstash
+
+sudo bin/logstash -f /etc/logstash/conf.d/logstash.conf
+
+verifique a integridade do index com 
+
+  $ curl -XGET 127.0.0.1:9200/_cat/indices?v
+
+consulte o index com 
+
+  $ curl -XGET '127.0.0.1:9200/logstash-2023.11.02-000001/_search?pretty'
+
+
+## agregacao
+
+## Kibana 
+
+sudo apt-get install kibana
+sudo vim /etc/kibana/kibana.yml
+  host 0.0.0.0
+sudo /bin/systemctl daemon-reload
+sudo /bin/systemctl enable kubana.service
+sudo /bin/systemctl enable kibana.service
+sudo /bin/systemctl start kibana.service
+sudo /bin/systemctl status kibana.service
+
+## Filebeat 
+
+sudo apt-get update && sudo apt-get install filebeat
+cd /etc/filebeat/modules.d/
+sudo apache.yml.disabled apache.yml
+sudo mv apache.yml.disabled apache.yml
+sudo systemctl start filebeat.service
+sudo systemctl status filebeat.service
+
+## Operacao 
+
+- Quantos shards sao necessarios 
+
+
+- rotacao de indices
+
+lifecycle indices
+hot warm cold delete 
+
+
+## Comandos necessarios 
+
+O comando abaixo desabilita a relocacao dos shards
+
+PUT _cluster/settings
+{
+  "transient": {
+    "cluster.routing.allocation.enable": "none"
+  }
+}
+
+para o elastic 
+
+sudo /bin/systemctl stop elasticsearch.service
+
+habilita a relocacao dos shards 
+
+PUT _cluster/settings
+{
+  "transient": {
+    "cluster.routing.allocation.enable": "all"
+  }
+}
+
+
+## links doc
+
+https://github.com/elastic/go-elasticsearch
+
+https://pkg.go.dev/github.com/elastic/go-elasticsearch#pkg-index
+
+https://www.elastic.co/guide/en/logstash/current/config-examples.html
+
+https://www.elastic.co/guide/en/beats/filebeat/current/configuration-dashboards.html
+
+https://www.elastic.co/guide/en/cloud-on-k8s/current/k8s-stack-helm-chart.html
+
